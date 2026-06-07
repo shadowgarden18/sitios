@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrimonio Histórico – Departamento de Itapúa</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --tierra: #8B4513;
+    --oro: #C9963B;
+    --crema: #F5EDD6;
+    --oscuro: #1A0F05;
+    --piedra: #6B5744;
+    --verde: #2D4A1E;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--oscuro);
+    color: var(--crema);
+    font-family: 'Crimson Pro', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    text-align: center;
+    padding: 60px 20px 40px;
+    background: linear-gradient(180deg, #0D0703 0%, var(--oscuro) 100%);
+    border-bottom: 2px solid var(--oro);
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C9963B' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5;
+  }
+  .header-label {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--oro);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+  header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(24px, 5vw, 52px);
+    font-weight: 900;
+    color: var(--crema);
+    line-height: 1.1;
+    text-shadow: 0 2px 20px rgba(201,150,59,0.3);
+  }
+  header h1 span { color: var(--oro); }
+  header p {
+    margin-top: 16px;
+    font-size: 17px;
+    font-style: italic;
+    color: rgba(245,237,214,0.65);
+    max-width: 600px;
+    margin-inline: auto;
+  }
+  .header-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 28px;
+    opacity: 0.4;
+  }
+  .header-line::before, .header-line::after {
+    content: '';
+    width: 80px;
+    height: 1px;
+    background: var(--oro);
+  }
+  .header-line span {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    color: var(--oro);
+  }
+
+  /* MAPA */
+  #map-section {
+    position: relative;
+  }
+  #map {
+    width: 100%;
+    height: 480px;
+    border-top: 2px solid var(--oro);
+    border-bottom: 2px solid var(--oro);
+    filter: sepia(30%) saturate(80%);
+  }
+  .map-overlay-title {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 999;
+    background: rgba(26,15,5,0.85);
+    border: 1px solid var(--oro);
+    padding: 8px 14px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--oro);
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
+  }
+
+  /* SITIOS GRID */
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(18px, 3vw, 28px);
+    text-align: center;
+    color: var(--oro);
+    padding: 50px 20px 10px;
+    letter-spacing: 3px;
+  }
+  .section-subtitle {
+    text-align: center;
+    font-style: italic;
+    color: rgba(245,237,214,0.5);
+    font-size: 15px;
+    padding-bottom: 40px;
+  }
+
+  .sites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2px;
+    padding: 0 2px 2px;
+    background: var(--oro);
+  }
+
+  .site-card {
+    background: #150C03;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    position: relative;
+  }
+  .site-card:hover { transform: scale(1.01); z-index: 2; }
+
+  .site-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    filter: sepia(20%) contrast(1.05);
+    transition: filter 0.4s ease;
+  }
+  .site-card:hover .site-img { filter: sepia(0%) contrast(1.1); }
+
+  .site-img-placeholder {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #2A1A0A 0%, #1A0F05 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+  }
+
+  .site-body {
+    padding: 22px 24px 28px;
+    border-top: 2px solid var(--tierra);
+  }
+  .site-number {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--oro);
+    opacity: 0.7;
+    margin-bottom: 8px;
+  }
+  .site-name {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--crema);
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .site-desc {
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: rgba(245,237,214,0.72);
+    font-style: italic;
+  }
+  .site-badge {
+    display: inline-block;
+    margin-top: 12px;
+    background: rgba(201,150,59,0.15);
+    border: 1px solid rgba(201,150,59,0.4);
+    color: var(--oro);
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    font-family: 'Cinzel', serif;
+    text-transform: uppercase;
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    border-top: 1px solid rgba(201,150,59,0.2);
+    font-size: 13px;
+    color: rgba(245,237,214,0.35);
+    font-style: italic;
+    letter-spacing: 1px;
+  }
+  footer strong {
+    color: rgba(201,150,59,0.6);
+    font-style: normal;
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  /* Leaflet custom popup */
+  .leaflet-popup-content-wrapper {
+    background: #1A0F05 !important;
+    border: 1px solid var(--oro) !important;
+    border-radius: 0 !important;
+    color: var(--crema) !important;
+    font-family: 'Crimson Pro', serif !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+  }
+  .leaflet-popup-tip { background: #1A0F05 !important; }
+  .leaflet-popup-content { margin: 14px 18px !important; }
+  .popup-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    color: var(--oro);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .popup-desc {
+    font-size: 13px;
+    color: rgba(245,237,214,0.75);
+    font-style: italic;
+    line-height: 1.5;
+    max-width: 200px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-label">3º BTI · Historia y Geografía · Itapúa, Paraguay</div>
+  <h1>Patrimonio Histórico<br><span>Departamento de Itapúa</span></h1>
+  <p>Valoración y preservación del patrimonio histórico y geográfico nacional y departamental</p>
+  <div class="header-line"><span>✦</span></div>
+</header>
+
+<!-- MAPA -->
+<div id="map-section">
+  <div class="map-overlay-title">Mapa Patrimonial · Itapúa</div>
+  <div id="map"></div>
+</div>
+
+<!-- TÍTULO SECCIÓN -->
+<h2 class="section-title">Los 5 Sitios Patrimoniales</h2>
+<p class="section-subtitle">Selección de lugares de valor histórico, cultural y geográfico del departamento</p>
+
+<!-- CARDS -->
+<div class="sites-grid">
+
+  <div class="site-card">
+    <img class="site-img" src="1780851160296_image.png" alt="Misión Trinidad" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="site-img-placeholder" style="display:none">🏛️</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 01 · Trinidad</div>
+      <div class="site-name">Misión Jesuítica de<br>Santísima Trinidad del Paraná</div>
+      <div class="site-desc">Una de las reducciones jesuíticas más grandes y mejor conservadas de América del Sur. Fundada en el siglo XVII, alberga la iglesia mayor, el colegio jesuítico y talleres artesanales.</div>
+      <span class="site-badge">🌍 Patrimonio UNESCO</span>
+    </div>
+  </div>
+
+  <div class="site-card">
+    <img class="site-img" src="1780851202124_image.png" alt="Misión Jesús" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="site-img-placeholder" style="display:none">⛪</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 02 · Jesús de Tavarangüé</div>
+      <div class="site-name">Misión Jesuítica de<br>Jesús de Tavarangüé</div>
+      <div class="site-desc">Destacada por su portal de entrada con arcos mixtilíneos únicos en Paraguay. Quedó inconclusa antes de la expulsión de los jesuitas en 1767. A unos 10 km de Trinidad.</div>
+      <span class="site-badge">🌍 Patrimonio UNESCO</span>
+    </div>
+  </div>
+
+  <div class="site-card">
+    <img class="site-img" src="1780851329868_image.png" alt="San Cosme" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="site-img-placeholder" style="display:none">🔭</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 03 · San Cosme y San Damián</div>
+      <div class="site-name">Misión Jesuita de<br>San Cosme y San Damián</div>
+      <div class="site-desc">Conserva el templo histórico en uso activo. Alberga un planetario y el Centro Astronómico que recrea el reloj solar diseñado por los jesuitas, único en Sudamérica.</div>
+      <span class="site-badge">★ Reloj Solar Jesuita</span>
+    </div>
+  </div>
+
+  <div class="site-card">
+    <img class="site-img" src="1780851567461_image.png" alt="Plaza de Armas" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="site-img-placeholder" style="display:none">🏙️</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 04 · Encarnación</div>
+      <div class="site-name">Plaza de Armas<br>de Encarnación</div>
+      <div class="site-desc">Sitio fundacional de la ciudad de Encarnación, instaurado por el santo jesuita Roque González de Santa Cruz. Centro cívico e histórico de la capital departamental de Itapúa.</div>
+      <span class="site-badge">⛪ Sitio Fundacional</span>
+    </div>
+  </div>
+
+  <div class="site-card">
+    <img class="site-img" src="1780851686348_image.png" alt="Batalla de Tacuary" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="site-img-placeholder" style="display:none">⚔️</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 05 · Carmen del Paraná</div>
+      <div class="site-name">Sitio Histórico<br>Batalla de Tacuary</div>
+      <div class="site-desc">Área protegida en las cercanías del arroyo Tacuary. Escenario de la Batalla del 9 de marzo de 1811, donde las fuerzas paraguayas detuvieron el avance del General Belgrano — hito clave de la independencia paraguaya.</div>
+      <span class="site-badge">⚔️ Hito de la Independencia</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <strong>CENTRO REGIONAL DE EDUCACIÓN "GRAL. PATRICIO ESCOBAR" · ENCARNACIÓN</strong><br>
+  3º BTI · Trabajo Práctico Sumativo — Historia y Geografía · Docente: Cyntia Celeste Galeano
+</footer>
+
+<script>
+  // Mapa con Leaflet + OpenStreetMap
+  const map = L.map('map', { zoomControl: true, scrollWheelZoom: false })
+    .setView([-27.2, -55.95], 9);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18
+  }).addTo(map);
+
+  const iconSvg = (n) => L.divIcon({
+    className: '',
+    html: `<div style="
+      width:36px;height:36px;border-radius:50%;
+      background:#1A0F05;border:2px solid #C9963B;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:13px;font-weight:700;
+      color:#C9963B;box-shadow:0 2px 10px rgba(0,0,0,0.5);
+    ">${n}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20]
+  });
+
+  const sitios = [
+    { n:1, lat:-27.132, lng:-55.702, name:"Misión Trinidad", desc:"Reducción jesuítica más grande de Paraguay. Patrimonio UNESCO.", badge:"🌍 UNESCO" },
+    { n:2, lat:-27.056, lng:-55.753, name:"Misión Jesús de Tavarangüé", desc:"Portal con arcos mixtilíneos únicos. Inconclusa en 1767. Patrimonio UNESCO.", badge:"🌍 UNESCO" },
+    { n:3, lat:-27.317, lng:-56.331, name:"San Cosme y San Damián", desc:"Templo activo + planetario y reloj solar jesuita.", badge:"🔭 Astronómico" },
+    { n:4, lat:-27.332, lng:-55.866, name:"Plaza de Armas – Encarnación", desc:"Sitio fundacional de Encarnación. Fundado por Roque González de Santa Cruz.", badge:"⛪ Fundacional" },
+    { n:5, lat:-27.225, lng:-56.163, name:"Batalla de Tacuary", desc:"Escenario del 9 de marzo de 1811. Hito de la independencia paraguaya.", badge:"⚔️ Histórico" },
+  ];
+
+  sitios.forEach(s => {
+    L.marker([s.lat, s.lng], { icon: iconSvg(s.n) })
+      .addTo(map)
+      .bindPopup(`<div class="popup-title">${s.n}. ${s.name}</div><div class="popup-desc">${s.desc}</div><div style="margin-top:8px;font-size:11px;color:#C9963B;font-family:Cinzel,serif;letter-spacing:2px">${s.badge}</div>`);
+  });
+</script>
+</body>
+</html>
