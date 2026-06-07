@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrimonio Histórico – Departamento de Itapúa</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --tierra: #8B4513;
+    --oro: #C9963B;
+    --crema: #F5EDD6;
+    --oscuro: #1A0F05;
+    --piedra: #6B5744;
+    --verde: #2D4A1E;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--oscuro);
+    color: var(--crema);
+    font-family: 'Crimson Pro', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ============================================================
+     ANIMACIONES PREMÌUM (CSS KEYFRAMES)
+     ============================================================ */
+  @keyframes premiumFadeIn {
+    0% { opacity: 0; filter: blur(12px); transform: translateY(30px); }
+    100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+  }
+
+  @keyframes lineExpand {
+    0% { width: 0; opacity: 0; }
+    100% { width: 80px; opacity: 0.4; }
+  }
+
+  @keyframes silverShine {
+    0% { left: -150%; }
+    50% { left: -150%; }
+    100% { left: 150%; }
+  }
+
+  @keyframes subtleGlow {
+    0%, 100% { box-shadow: 0 0 4px rgba(201, 150, 59, 0.2); border-color: rgba(201, 150, 59, 0.4); }
+    50% { box-shadow: 0 0 16px rgba(201, 150, 59, 0.6); border-color: var(--oro); }
+  }
+
+  /* === HEADER CON PARTICULAS === */
+  header {
+    position: relative;
+    text-align: center;
+    padding: 80px 20px 60px;
+    background: linear-gradient(180deg, #0D0703 0%, var(--oscuro) 100%);
+    border-bottom: 2px solid var(--oro);
+    overflow: hidden;
+  }
+  
+  /* Canvas para el polvo estelar interactivo */
+  #header-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.4;
+    z-index: 1;
+  }
+
+  .header-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .header-label {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--oro);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: premiumFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  }
+  header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(24px, 5vw, 52px);
+    font-weight: 900;
+    color: var(--crema);
+    line-height: 1.1;
+    text-shadow: 0 2px 20px rgba(201,150,59,0.3);
+    opacity: 0;
+    animation: premiumFadeIn 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+  }
+  header h1 span { color: var(--oro); }
+  header p {
+    margin-top: 16px;
+    font-size: 17px;
+    font-style: italic;
+    color: rgba(245,237,214,0.65);
+    max-width: 600px;
+    margin-inline: auto;
+    opacity: 0;
+    animation: premiumFadeIn 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+  }
+  .header-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 28px;
+  }
+  .header-line::before, .header-line::after {
+    content: '';
+    height: 1px;
+    background: var(--oro);
+    width: 0;
+    animation: lineExpand 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+  }
+  .header-line span {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    color: var(--oro);
+    opacity: 0;
+    animation: premiumFadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) 1s forwards;
+  }
+
+  /* ============================================================
+     MAPA ORIGINAL (TOTALMENTE INTACTO SIN MODIFICACIONES)
+     ============================================================ */
+  #map-section {
+    position: relative;
+  }
+  #map {
+    width: 100%;
+    height: 480px;
+    border-top: 2px solid var(--oro);
+    border-bottom: 2px solid var(--oro);
+    filter: sepia(30%) saturate(80%);
+  }
+  .map-overlay-title {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 999;
+    background: rgba(26,15,5,0.85);
+    border: 1px solid var(--oro);
+    padding: 8px 14px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--oro);
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
+  }
+
+  /* ============================================================
+     SITIOS GRID Y EFECTOS PREMIUM TRANSICIONALES
+     ============================================================ */
+  
+  /* Sistema de Scroll Reveal por clase */
+  .reveal-element {
+    opacity: 0;
+    transform: translateY(45px);
+    filter: blur(4px);
+    transition: opacity 1.2s cubic-bezier(0.215, 0.61, 0.355, 1), 
+                transform 1.2s cubic-bezier(0.215, 0.61, 0.355, 1), 
+                filter 1.2s cubic-bezier(0.215, 0.61, 0.355, 1);
+    will-change: transform, opacity, filter;
+  }
+  .reveal-element.animated {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(18px, 3vw, 28px);
+    text-align: center;
+    color: var(--oro);
+    padding: 50px 20px 10px;
+    letter-spacing: 3px;
+  }
+  .section-subtitle {
+    text-align: center;
+    font-style: italic;
+    color: rgba(245,237,214,0.5);
+    font-size: 15px;
+    padding-bottom: 40px;
+  }
+
+  .sites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2px;
+    padding: 0 2px 2px;
+    background: var(--oro);
+  }
+
+  .site-card {
+    background: #150C03;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  /* Sombra flotante e incremento suave de profundidad */
+  .site-card:hover { 
+    transform: translateY(-5px); 
+    z-index: 2; 
+    box-shadow: 0 16px 32px rgba(13, 7, 3, 0.8), 0 0 20px rgba(201, 150, 59, 0.15);
+  }
+
+  /* Contenedor de imagen para albergar el barrido reflectivo */
+  .site-img-wrapper {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+  }
+
+  /* Barrido reflectivo de luz premium (Shine overlay) */
+  .site-img-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    transform: skewX(-25deg);
+    pointer-events: none;
+  }
+  .site-card:hover .site-img-wrapper::after {
+    animation: silverShine 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .site-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: sepia(20%) contrast(1.05);
+    transition: filter 0.8s cubic-bezier(0.16, 1, 0.3, 1), 
+                transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .site-card:hover .site-img { 
+    filter: sepia(0%) contrast(1.15); 
+    transform: scale(1.05);
+  }
+
+  .site-img-placeholder {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #2A1A0A 0%, #1A0F05 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+  }
+
+  .site-body {
+    padding: 22px 24px 28px;
+    border-top: 2px solid var(--tierra);
+    transition: background-color 0.4s ease;
+  }
+  .site-card:hover .site-body {
+    background-color: #1c1004;
+  }
+
+  .site-number {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--oro);
+    opacity: 0.7;
+    margin-bottom: 8px;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .site-card:hover .site-number {
+    transform: translateX(4px);
+  }
+
+  .site-name {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--crema);
+    line-height: 1.3;
+    margin-bottom: 12px;
+    transition: color 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .site-card:hover .site-name {
+    color: #fff;
+    transform: translateX(4px);
+  }
+
+  .site-desc {
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: rgba(245,237,214,0.72);
+    font-style: italic;
+    transition: color 0.4s ease;
+  }
+  .site-card:hover .site-desc {
+    color: rgba(245,237,214,0.9);
+  }
+
+  .site-badge {
+    display: inline-block;
+    margin-top: 14px;
+    background: rgba(201,150,59,0.12);
+    border: 1px solid rgba(201,150,59,0.4);
+    color: var(--oro);
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    font-family: 'Cinzel', serif;
+    text-transform: uppercase;
+    animation: subtleGlow 3s infinite ease-in-out;
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    border-top: 1px solid rgba(201,150,59,0.2);
+    font-size: 13px;
+    color: rgba(245,237,214,0.35);
+    font-style: italic;
+    letter-spacing: 1px;
+  }
+  footer strong {
+    color: rgba(201,150,59,0.6);
+    font-style: normal;
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  /* ============================================================
+     LEAFLET CUSTOM POPUP ORIGINAL (INTACTO)
+     ============================================================ */
+  .leaflet-popup-content-wrapper {
+    background: #1A0F05 !important;
+    border: 1px solid var(--oro) !important;
+    border-radius: 0 !important;
+    color: var(--crema) !important;
+    font-family: 'Crimson Pro', serif !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+  }
+  .leaflet-popup-tip { background: #1A0F05 !important; }
+  .leaflet-popup-content { margin: 14px 18px !important; }
+  .popup-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    color: var(--oro);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .popup-desc {
+    font-size: 13px;
+    color: rgba(245,237,214,0.75);
+    font-style: italic;
+    line-height: 1.5;
+    max-width: 200px;
+  }
+</style>
+</head>
+<body>
+
+<header id="hero-header">
+  <canvas id="header-canvas"></canvas>
+  <div class="header-content">
+    <div class="header-label">3º BTI · Historia y Geografía · Itapúa, Paraguay</div>
+    <h1>Patrimonio Histórico<br><span>Departamento de Itapúa</span></h1>
+    <p>Valoración y preservación del patrimonio histórico y geográfico nacional y departamental</p>
+    <div class="header-line"><span>✦</span></div>
+  </div>
+</header>
+
+<div id="map-section">
+  <div class="map-overlay-title">Mapa Patrimonial · Itapúa</div>
+  <div id="map"></div>
+</div>
+
+<h2 class="section-title reveal-element">Los 5 Sitios Patrimoniales</h2>
+<p class="section-subtitle reveal-element">Selección de lugares de valor histórico, cultural y geográfico del departamento</p>
+
+<div class="sites-grid">
+
+  <div class="site-card reveal-element">
+    <div class="site-img-wrapper">
+      <img class="site-img" src="m1.jpg" alt="Misión Trinidad" onerror="this.style.display='none';this.parentElement.nextElementSibling.style.display='flex'">
+    </div>
+    <div class="site-img-placeholder" style="display:none">🏛️</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 01 · Trinidad</div>
+      <div class="site-name">Misión Jesuítica de<br>Santísima Trinidad del Paraná</div>
+      <div class="site-desc">Una de las reducciones jesuíticas más grandes y mejor conservadas de América del Sur. Fundada en el siglo XVII, alberga la iglesia mayor, el colegio jesuítico y talleres artesanales.</div>
+      <span class="site-badge">🌍 Patrimonio UNESCO</span>
+    </div>
+  </div>
+
+  <div class="site-card reveal-element">
+    <div class="site-img-wrapper">
+      <img class="site-img" src="m2.jpg" alt="Misión Jesús" onerror="this.style.display='none';this.parentElement.nextElementSibling.style.display='flex'">
+    </div>
+    <div class="site-img-placeholder" style="display:none">⛪</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 02 · Jesús de Tavarangüé</div>
+      <div class="site-name">Misión Jesuítica de<br>Jesús de Tavarangüé</div>
+      <div class="site-desc">Destacada por su portal de entrada con arcos mixtilíneos únicos en Paraguay. Quedó inconclusa antes de la expulsión de los jesuitas en 1767. A unos 10 km de Trinidad.</div>
+      <span class="site-badge">🌍 Patrimonio UNESCO</span>
+    </div>
+  </div>
+
+  <div class="site-card reveal-element">
+    <div class="site-img-wrapper">
+      <img class="site-img" src="m3.jpg" alt="San Cosme" onerror="this.style.display='none';this.parentElement.nextElementSibling.style.display='flex'">
+    </div>
+    <div class="site-img-placeholder" style="display:none">🔭</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 03 · San Cosme y San Damián</div>
+      <div class="site-name">Misión Jesuita de<br>San Cosme y San Damián</div>
+      <div class="site-desc">Conserva el templo histórico en uso activo. Alberga un planetario y el Centro Astronómico que recrea el reloj solar diseñado por los jesuitas, único en Sudamérica.</div>
+      <span class="site-badge">★ Reloj Solar Jesuita</span>
+    </div>
+  </div>
+
+  <div class="site-card reveal-element">
+    <div class="site-img-wrapper">
+      <img class="site-img" src="m4.jpg" alt="Plaza de Armas" onerror="this.style.display='none';this.parentElement.nextElementSibling.style.display='flex'">
+    </div>
+    <div class="site-img-placeholder" style="display:none">🏙️</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 04 · Encarnación</div>
+      <div class="site-name">Plaza de Armas<br>de Encarnación</div>
+      <div class="site-desc">Sitio fundacional de la ciudad de Encarnación, instaurado por el santo jesuita Roque González de Santa Cruz. Centro cívico e histórico de la capital departamental de Itapúa.</div>
+      <span class="site-badge">⛪ Sitio Fundacional</span>
+    </div>
+  </div>
+
+  <div class="site-card reveal-element">
+    <div class="site-img-wrapper">
+      <img class="site-img" src="m5.jpg" alt="Batalla de Tacuary" onerror="this.style.display='none';this.parentElement.nextElementSibling.style.display='flex'">
+    </div>
+    <div class="site-img-placeholder" style="display:none">⚔️</div>
+    <div class="site-body">
+      <div class="site-number">Sitio 05 · Carmen del Paraná</div>
+      <div class="site-name">Sitio Histórico<br>Batalla de Tacuary</div>
+      <div class="site-desc">Área protegida en las cercanías del arroyo Tacuary. Escenario de la Batalla del 9 de marzo de 1811, donde las fuerzas paraguayas detuvieron el avance del General Belgrano — hito clave de la independencia paraguaya.</div>
+      <span class="site-badge">⚔️ Hito de la Independencia</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <strong>CENTRO REGIONAL DE EDUCACIÓN "GRAL. PATRICIO ESCOBAR" · ENCARNACIÓN</strong><br>
+  3º BTI · Trabajo Práctico Sumativo — Historia y Geografía · Docente: Cyntia Celeste Galeano
+</footer>
+
+<script>
+  // ============================================================
+  // SCRIPT MAPA ORIGINAL (100% INTACTO)
+  // ============================================================
+  const map = L.map('map', { zoomControl: true, scrollWheelZoom: false })
+    .setView([-27.2, -55.95], 9);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18
+  }).addTo(map);
+
+  const iconSvg = (n) => L.divIcon({
+    className: '',
+    html: `<div style="
+      width:36px;height:36px;border-radius:50%;
+      background:#1A0F05;border:2px solid #C9963B;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:13px;font-weight:700;
+      color:#C9963B;box-shadow:0 2px 10px rgba(0,0,0,0.5);
+    ">${n}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20]
+  });
+
+  const sitios = [
+    { n:1, lat:-27.132, lng:-55.702, name:"Misión Trinidad", desc:"Reducción jesuítica más grande de Paraguay. Patrimonio UNESCO.", badge:"🌍 UNESCO" },
+    { n:2, lat:-27.056, lng:-55.753, name:"Misión Jesús de Tavarangüé", desc:"Portal con arcos mixtilíneos únicos. Inconclusa en 1767. Patrimonio UNESCO.", badge:"🌍 UNESCO" },
+    { n:3, lat:-27.317, lng:-56.331, name:"San Cosme y San Damián", desc:"Templo activo + planetario y reloj solar jesuita.", badge:"🔭 Astronómico" },
+    { n:4, lat:-27.332, lng:-55.866, name:"Plaza de Armas – Encarnación", desc:"Sitio fundacional de Encarnación. Fundado por Roque González de Santa Cruz.", badge:"⛪ Fundacional" },
+    { n:5, lat:-27.225, lng:-56.163, name:"Batalla de Tacuary", desc:"Escenario del 9 de marzo de 1811. Hito de la independencia paraguaya.", badge:"⚔️ Histórico" },
+  ];
+
+  sitios.forEach(s => {
+    L.marker([s.lat, s.lng], { icon: iconSvg(s.n) })
+      .addTo(map)
+      .bindPopup(`<div class="popup-title">${s.n}. ${s.name}</div><div class="popup-desc">${s.desc}</div><div style="margin-top:8px;font-size:11px;color:#C9963B;font-family:Cinzel,serif;letter-spacing:2px">${s.badge}</div>`);
+  });
+
+
+  // ============================================================
+  // SCRIPTS DE ANIMACIÓN PREMIUM COMPLEMENTARIOS
+  // ============================================================
+
+  // 1. SISTEMA INTERSECTION OBSERVER (SCROLL REVEAL EN CADENA)
+  document.addEventListener('DOMContentLoaded', () => {
+    const revealElements = document.querySelectorAll('.reveal-element');
+    
+    const observerOptions = {
+      root: null,
+      threshold: 0.1,
+      rootMargin: "0px 0px -40px 0px"
+    };
+
+    const scrollObserver = new IntersectionObserver((entries, observer) => {
+      let cardDelayIndex = 0;
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          if (entry.target.classList.contains('site-card')) {
+            // Efecto cascada escalonado controlado
+            setTimeout(() => {
+              entry.target.classList.add('animated');
+            }, cardDelayIndex * 120);
+            cardDelayIndex++;
+          } else {
+            entry.target.classList.add('animated');
+          }
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    revealElements.forEach(el => scrollObserver.observe(el));
+  });
+
+  // 2. CANVAS DE PARTICULAS FLOTANTES EN EL HEADER (POLVO BARROCO INTERACTIVO)
+  const canvas = document.getElementById('header-canvas');
+  const ctx = canvas.getContext('2d');
+  const header = document.getElementById('hero-header');
+
+  let particlesArray = [];
+  let mouse = { x: null, y: null, radius: 80 };
+
+  function resizeCanvas() {
+    canvas.width = header.offsetWidth;
+    canvas.height = header.offsetHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  header.addEventListener('mousemove', (e) => {
+    const rect = header.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  });
+
+  header.addEventListener('mouseleave', () => {
+    mouse.x = null;
+    mouse.y = null;
+  });
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 1.5 + 0.5;
+      this.speedX = Math.random() * 0.4 - 0.2;
+      this.speedY = Math.random() * -0.3 - 0.1; // Fluyen sutilmente hacia arriba
+      this.alpha = Math.random() * 0.5 + 0.1;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      if (this.y < 0) {
+        this.y = canvas.height;
+        this.x = Math.random() * canvas.width;
+      }
+      if (this.x < 0 || this.x > canvas.width) {
+        this.speedX = -this.speedX;
+      }
+
+      // Repulsión muy sutil al pasar el mouse
+      if (mouse.x != null && mouse.y != null) {
+        let dx = this.x - mouse.x;
+        let dy = this.y - mouse.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < mouse.radius) {
+          let force = (mouse.radius - distance) / mouse.radius;
+          this.x += (dx / distance) * force * 2;
+          this.y += (dy / distance) * force * 2;
+        }
+      }
+    }
+    draw() {
+      ctx.save();
+      ctx.globalAlpha = this.alpha;
+      ctx.fillStyle = '#C9963B'; // Color Oro institucional
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function initParticles() {
+    particlesArray = [];
+    const numberOfParticles = Math.floor((canvas.width * canvas.height) / 7000);
+    for (let i = 0; i < Math.min(numberOfParticles, 80); i++) {
+      particlesArray.push(new Particle());
+    }
+  }
+  initParticles();
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < particlesArray.length; i++) {
+      particlesArray[i].update();
+      particlesArray[i].draw();
+    }
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+</script>
+</body>
+</html>
