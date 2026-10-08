@@ -1,0 +1,27 @@
+# Confidenciales
+google-drive-credentials.json
+config/google-drive-credentials.json
+.env
+.env.local
+.env.dev
+.env.prod
+
+# Uploads
+public/uploads/*
+!public/uploads/.htaccess
+uploads/*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
+node_modules/
+vendor/
+
+# Docker
+.dockerignore
